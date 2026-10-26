@@ -1284,7 +1284,7 @@ window.__ModuleLoader__.load({
       const voicesReady = Boolean(status?.installed?.voices?.installed)
       const ready = modelReady && runtimeReady && asrReady && voicesReady
       const visible = expanded ?? (status ? !ready : false)
-      const summary = `${selected?.label || '模型'}${ready ? ' · 已就绪' : ' · 待配置'}`
+      const summary = `${selected?.label || '模型'}${ready ? ' · 已安装' : ' · 待配置'}`
       const hardwareText = hardware
         ? `${hardware.gpu?.name || 'GPU 未检测'}${hardware.gpu?.vramGB ? ` · ${hardware.gpu.vramGB} GB` : ''} · 推荐 ${String(catalog?.recommended || 'q4_k').toUpperCase()}`
         : '正在检测硬件…'
@@ -1303,6 +1303,7 @@ window.__ModuleLoader__.load({
         ),
         visible ? h('div', { className: 'dshvd-models-body' },
           h('div', { className: 'dshvd-model-hint' }, hardwareText),
+          !ready ? h('div', { className: 'dshvd-setup' }, '首次使用：先安装运行时、模型和 ASR，完成后点下面的“启动 Breeze”。') : null,
           h('div', { className: 'dshvd-model-grid' },
             h('label', { className: 'dshvd-field' },
               h('span', { className: 'dshvd-label' }, 'TTS 模型'),
@@ -1340,15 +1341,17 @@ window.__ModuleLoader__.load({
             h('span', { className: 'dshvd-hintline' }, '随包音色 15 个'),
           ),
           h('div', { className: 'dshvd-model-state' },
-            h('span', null, modelReady ? '模型 ✓' : '模型 —'),
-            h('span', null, runtimeReady ? '运行时 ✓' : '运行时 —'),
-            h('span', null, asrReady ? 'ASR ✓' : 'ASR —'),
-            h('span', null, voicesReady ? '音色 ✓' : '音色 —'),
+            h('span', null, modelReady ? '模型 ✓' : '模型未装'),
+            h('span', null, runtimeReady ? '运行时 ✓' : '运行时未装'),
+            h('span', null, asrReady ? 'ASR ✓' : 'ASR 未装'),
+            h('span', null, voicesReady ? '音色 ✓' : '音色缺失'),
           ),
           h('div', { className: 'dshvd-actions' },
             h('button', { type: 'button', className: 'dshvd-action', disabled: busy || !acceptLicense || install?.status === 'running', onClick: start }, '安装 / 更新'),
             install?.status === 'running' ? h('button', { type: 'button', className: 'dshvd-action', onClick: cancel }, '取消下载') : null,
           ),
+          !acceptLicense ? h('div', { className: 'dshvd-hintline' }, '先勾选“接受非商用许可”才能安装。') : null,
+          h('div', { className: 'dshvd-hintline' }, '下载需要访问 huggingface.co 和 github.com；超时请先开全局代理再重试。'),
           progress && install?.status === 'running' ? h('div', { className: 'dshvd-progress' },
             h('div', { className: 'dshvd-progress-bar', style: { width: progress.totalBytes ? `${Math.min(100, (Number(progress.completedBytes) || 0) / Number(progress.totalBytes) * 100)}%` : '2%' } }),
             h('span', null, progressText),
@@ -1405,26 +1408,34 @@ window.__ModuleLoader__.load({
           const result = await postJson('/server/start', {})
           setMessage(result.started ? 'Breeze 已启动。' : 'Breeze 已经在运行。')
         } catch (failure) {
-          setMessage(`启动失败：${failure.message || failure}`)
+          const detail = failure instanceof Error ? failure.message : String(failure)
+          setMessage(`启动失败：${/fetch failed|ECONNREFUSED|未安装|未启动|未就绪|Breeze/i.test(detail)
+            ? 'Breeze 尚未安装或未就绪，请先在“模型与依赖”安装运行时和模型。'
+            : detail}`)
         } finally {
           setBusy(false)
         }
       }, [])
 
-      const refreshVoices = useCallback(async () => {
-        setBusy(true)
+      const refreshVoices = useCallback(async ({ quiet = false } = {}) => {
+        if (!quiet) setBusy(true)
         try {
           const result = await getJson('/voices')
           setVoices(result.voices || [])
           setMessage(`已读取 ${result.voices?.length || 0} 个音色`)
         } catch (failure) {
-          setMessage(`读取音色失败：${failure.message || failure}`)
+          const detail = failure instanceof Error ? failure.message : String(failure)
+          if (/fetch failed|ECONNREFUSED|未安装|未启动|未就绪|Breeze/i.test(detail)) {
+            setMessage('Breeze 尚未就绪：请先在“模型与依赖”安装运行时、模型和 ASR，再点“启动 Breeze”。')
+          } else {
+            setMessage(`读取音色失败：${detail}`)
+          }
         } finally {
-          setBusy(false)
+          if (!quiet) setBusy(false)
         }
       }, [])
 
-      useEffect(() => { void refreshVoices() }, [refreshVoices])
+      useEffect(() => { void refreshVoices({ quiet: true }) }, [refreshVoices])
 
       const voiceName = useCallback(voice => {
         const description = String(voice?.description || '').trim()
@@ -1436,6 +1447,10 @@ window.__ModuleLoader__.load({
         setBusy(true)
         setMessage('正在生成测试语音…')
         try {
+          const health = await getJson('/health')
+          if (!health.breeze?.ok) {
+            throw new Error(health.breeze?.error || 'Breeze 未启动，请先安装运行时和模型')
+          }
           const response = await fetch(`${API}/tts`, {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
@@ -1449,7 +1464,10 @@ window.__ModuleLoader__.load({
           await audio.play()
           setMessage('测试语音已播放。')
         } catch (failure) {
-          setMessage(`测试失败：${failure.message || failure}`)
+          const detail = failure instanceof Error ? failure.message : String(failure)
+          setMessage(`测试失败：${/fetch failed|ECONNREFUSED|未安装|未启动|未就绪|Breeze/i.test(detail)
+            ? 'Breeze 未就绪，请先安装运行时、模型和 ASR，再点“启动 Breeze”。'
+            : detail}`)
         } finally {
           setBusy(false)
         }
@@ -1599,6 +1617,7 @@ window.__ModuleLoader__.load({
       .dshvd-model-toggle:hover { opacity: 1; }
       .dshvd-models-body { display: flex; flex-direction: column; gap: 8px; padding: 8px 0 9px; }
       .dshvd-model-hint { font-size: 10px; opacity: .55; }
+      .dshvd-setup { font-size: 11px; line-height: 1.55; padding: 7px 9px; border-radius: 8px; background: rgba(127,164,255,.08); color: #a9c2ff; }
       .dshvd-model-grid { display: grid; grid-template-columns: minmax(180px, 1.1fr) minmax(180px, 1fr); gap: 10px; }
       .dshvd-model-checks { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
       .dshvd-model-state { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 10px; opacity: .68; }

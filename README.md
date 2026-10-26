@@ -16,7 +16,9 @@
 dsh plugin --profile desktop add "link:<repo>"
 ```
 
-重新加载 DSH → 刷新页面 → 打开「设置 → 语音通话」→ 模型与依赖里安装缺失项。详细步骤见 [说明书](docs/VOICE-CLOCK.md)。
+重新加载 DSH → 刷新页面 → 打开「设置 → 语音通话」→ 模型与依赖里勾选“接受非商用许可”，安装运行时、模型和 ASR，再点“启动 Breeze”。详细步骤见 [说明书](docs/VOICE-CLOCK.md)。
+
+> 下载需要访问 Hugging Face 和 GitHub；网络受限时请先开启全局代理/TUN，不要用另开的 AI 会话手工 `curl`。
 
 ## 文档
 

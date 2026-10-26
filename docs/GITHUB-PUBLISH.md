@@ -1,4 +1,4 @@
-# GitHub 开源发布清单
+﻿# GitHub 开源发布清单
 
 当前仓库已发布到 GitHub：
 
@@ -10,8 +10,8 @@ https://github.com/aotianlong041-creator/caiji12138
 
 - 远端：`origin` → `https://github.com/aotianlong041-creator/caiji12138.git`
 - 默认分支：`main`
-- 已发布提交：`aee2171`（首次开源快照）
-- 版本：`1.1.0`
+- 已发布提交：见远端 `main` 最新提交
+- 版本：`1.1.1`
 - 许可证：代码与随包音色库 MIT；Breeze 权重不随包、非商用许可；详见 `LICENSE` / `NOTICE.md`
 - 包元数据：`package.json` 的 `license` 为 `MIT`
 - 说明书：`docs/VOICE-CLOCK.md`
@@ -107,3 +107,4 @@ git grep -nE 'C:\\Users\\|/Users/|sk-[A-Za-z0-9_-]{8,}|ghp_[A-Za-z0-9]{20,}|Bear
 ## 许可证
 
 MIT。第三方依赖各自遵循其许可证；发布时保留依赖声明与 LICENSE。
+
