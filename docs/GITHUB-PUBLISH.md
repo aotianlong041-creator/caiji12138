@@ -1,16 +1,22 @@
 # GitHub 开源发布清单
 
-本文件记录当前仓库的开源准备状态和剩余步骤。**本仓库尚未配置 git remote，因此还没有推送。**
+当前仓库已发布到 GitHub：
+
+```text
+https://github.com/aotianlong041-creator/caiji12138
+```
 
 ## 当前状态
 
-- 分支：`feature/dafeiyu-3d-rebuild`
+- 远端：`origin` → `https://github.com/aotianlong041-creator/caiji12138.git`
+- 默认分支：`main`
+- 已发布提交：`aee2171`（首次开源快照）
 - 版本：`1.1.0`
-- 远端：未配置
 - 许可证：代码与随包音色库 MIT；Breeze 权重不随包、非商用许可；详见 `LICENSE` / `NOTICE.md`
 - 包元数据：`package.json` 的 `license` 为 `MIT`
 - 说明书：`docs/VOICE-CLOCK.md`
 - 随包音色：`assets/voices/`（15 个 `.breeze`）
+- GitHub About：已填写项目简介与 topics
 - 敏感信息：未发现真实 Cookie/API Key；本机绝对路径已改为占位符
 - 自动测试：`npm test`、`node test/host-harness.mjs`、`git diff --check` 已通过
 
