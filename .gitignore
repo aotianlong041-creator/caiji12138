@@ -1,0 +1,14 @@
+node_modules/
+backups/
+*.tmp
+*.log
+.DS_Store
+voice-samples/
+.env
+.env.*
+credentials*.json
+*.pem
+*.key
+*.p12
+*.gguf
+voice-models/

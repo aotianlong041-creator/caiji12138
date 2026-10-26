@@ -1,0 +1,6 @@
+# dsh-voice-duplex bundle patch
+# Host half attaches to the DSH web server; browser half is discovered through dsh.client.
+- insert:
+    - id: dsh-voice-duplex
+      name: '@local/dsh-voice-duplex'
+      config: {}
