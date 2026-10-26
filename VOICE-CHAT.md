@@ -15,14 +15,16 @@
 
 ## 记忆与侧边栏会话
 
-- 所有语音通话共用一个固定 DSH 会话：`dsh-voice-chat`；不会按工作会话反复新建；
+- 所有语音通话共用一个固定后台 DSH 会话：`dsh-voice-chat-dafish-v2`；不会按工作会话反复新建；
 - 通过 DSH Agent 创建/恢复该会话，插件 reload 后用 `ctx.agents.resume()` 接回原会话；
 - user/assistant 消息写入该 DSH session log；
 - 下一轮用 `deriveMessages()` 读取它，作为后台聊天记忆；
-- 会话通过 `workspaceRegistry` 挂到当前工作区，侧边栏只有这一条语音会话记录；
-- 记忆只保存在固定会话 `dsh-voice-chat` 的 session log 中，不跨会话；
+- **后台语音会话不再挂到工作区/侧边栏**；插件启动时会摘除 `dsh-voice-chat*` 和 `voice-bg-*` 的旧工作区投影，避免重启后同时恢复两个语音窗口；
+- 旧版 `dsh-voice-chat` 仅作迁移识别，不再作为当前记忆会话；
+- 记忆只保存在固定会话 `dsh-voice-chat-dafish-v2` 的 session log 中，不跨会话；
 - 每轮只读当前工作会话的运行状态和最近消息摘要（只读、临时，不写入记忆）；
 - 语音聊天不写入工作会话，工作摘要也不进入语音记忆；
+- 如果该后台 session log 在进程中断后损坏，只重置这一条会话，不要删除整个 `sessions` 目录。
 
 ## 模型与人设
 
