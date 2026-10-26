@@ -207,6 +207,7 @@ window.__ModuleLoader__.load({
     if (typeof window !== 'undefined') {
       window.__dshVoiceStripForSpeech = stripForSpeech
       window.__dshVoiceSpeechText = speechText
+      window.__dshVoiceIsBreezeBusy = isBreezeBusy
     }
 
     function splitSpeech(text) {
@@ -264,6 +265,25 @@ window.__ModuleLoader__.load({
       let sum = 0
       for (const value of values) sum += value * value
       return Math.sqrt(sum / Math.max(1, values.length))
+    }
+
+    function isBreezeBusy(status, body) {
+      return status === 409 || status === 429 || /busy|another generation is running/i.test(String(body || ''))
+    }
+
+    function sleepUntilRetry(ms, signal) {
+      return new Promise((resolve, reject) => {
+        if (signal?.aborted) return reject(Object.assign(new Error('aborted'), { name: 'AbortError' }))
+        const timer = window.setTimeout(() => {
+          signal?.removeEventListener('abort', onAbort)
+          resolve()
+        }, ms)
+        const onAbort = () => {
+          window.clearTimeout(timer)
+          reject(Object.assign(new Error('aborted'), { name: 'AbortError' }))
+        }
+        signal?.addEventListener('abort', onAbort, { once: true })
+      })
     }
 
     // ------------------------------------------------------------------
@@ -480,20 +500,31 @@ window.__ModuleLoader__.load({
             await ctx.resume()
           }
           const targetRate = ctx.sampleRate || 24000
-          const response = await fetch(`${API}/tts-stream`, {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({
-              text: sentence,
-              voice: configRef.current?.voiceId,
-              instructions: voiceDirection || configRef.current?.instruction,
-            }),
-            signal: controller.signal,
-          })
-          if (!response.ok) {
-            const raw = await response.text().catch(() => '')
-            throw new Error(raw || `HTTP ${response.status}`)
+          let response
+          let lastBusyBody = ''
+          for (let attempt = 0; attempt < 8; attempt += 1) {
+            response = await fetch(`${API}/tts-stream`, {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({
+                text: sentence,
+                voice: configRef.current?.voiceId,
+                instructions: voiceDirection || configRef.current?.instruction,
+              }),
+              signal: controller.signal,
+            })
+            if (response.ok) break
+            lastBusyBody = await response.text().catch(() => '')
+            if (!isBreezeBusy(response.status, lastBusyBody)) {
+              throw new Error(lastBusyBody || `HTTP ${response.status}`)
+            }
+            if (attempt === 7) {
+              throw new Error('Breeze 正忙：上一条语音仍在生成，重试后仍未空闲。')
+            }
+            setStatus(`等待 Breeze 空闲（${attempt + 1}/8）…`)
+            await sleepUntilRetry(350 + attempt * 250, controller.signal)
           }
+          if (!response?.ok) throw new Error(lastBusyBody || 'TTS 请求失败')
           const streamRate = Number(response.headers.get('x-sample-rate')) || 24000
           let pending = new Uint8Array(0)
           let totalSamples = 0

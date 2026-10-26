@@ -30,7 +30,7 @@
     "node": ">=22.19.0"
   },
   "scripts": {
-    "test": "node test/smoke.mjs && node test/speech-text.cjs && node --test test/clock.test.mjs test/models.test.mjs"
+    "test": "node test/smoke.mjs && node test/speech-text.cjs && node test/tts-busy.cjs && node --test test/clock.test.mjs test/models.test.mjs"
   },
   "dsh": {
     "bundle": {

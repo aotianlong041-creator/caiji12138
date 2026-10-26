@@ -276,6 +276,10 @@ POST /dsh-voice/tts-stream
 
 TTS 前会从模型 JSON 中只提取 `reply`，并剥离字段名、代码围栏和括号动作；如果没有 `reply`，宁可不播报。
 
+### TTS 提示 `busy, another generation is running`
+
+这是 Breeze 上一段音频还没生成完，新的语音请求被拒绝。客户端会串行重试 8 次并显示“等待 Breeze 空闲”，不会把原始 JSON 错误直接抛给用户。连续失败时等几秒再试，或重启 Breeze。
+
 ### 想改用其他量化模型
 
 设置页重新选择模型并安装即可。不同模型共用同一个 `modelDir`，旧文件会保留；可自行清理不再使用的 `.gguf`。
